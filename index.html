@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Olam</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="preconnect" href="https://olam.in">
+    <link rel="dns-prefetch" href="https://olam.in">
+    <link href="style.css" rel="stylesheet" type="text/css" />
+    <link rel="preload" href="https://olam.in" as="document">
+</head>
+<body>
+
+    <!-- Loading State -->
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <p>Opening Olam...</p>
+    </div>
+
+    <!-- The dictionary website (src set by JS for speed) -->
+    <iframe id="olam-frame" border="0"></iframe>
+
+    <!-- Attribution Footer -->
+    <div id="attribution-footer">
+        Powered by the <a href="https://olam.in" target="_blank">Olam Open Dataset</a> 
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "manifest_version": 2,
+  "name": "Olam English Malayalam Dictionary",
+  "version": "1.0",
+  "description": "Olam.in - The fast English Malayalam dictionary",
+  "homepage_url": "http://olam.in",
+  "icons": {
+    "16": "16.png",
+    "128": "128.png"
+  },
+  "browser_action": {
+    "default_icon": {
+      "16": "16.png"
+    },
+    "default_popup": "index.html",
+    "default_title": "Olam English Malayalam dictionary"
+  },
+  "permissions": [
+    "alarms",
+    "https://olam.in/*"
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "malayalam-dictionary-project@official",
+      "strict_min_version": "102.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
+}
