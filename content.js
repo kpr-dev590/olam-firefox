@@ -11,111 +11,134 @@ browser.runtime.onMessage.addListener((request) => {
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
 
-        // 3. Create the popup container
+        // 3. Define dimensions
+        const popupWidth = 500;
+        const popupHeight = 450;
+        const margin = 10;
+
+        // 4. Calculate Position (Collision Detection)
+        
+        // --- Horizontal (X) Axis ---
+        let left = rect.left; 
+        if (left + popupWidth + margin > window.innerWidth) {
+            left = window.innerWidth - popupWidth - margin;
+        }
+        if (left < margin) left = margin;
+
+        // --- Vertical (Y) Axis ---
+        let top = rect.bottom + margin;
+        if (top + popupHeight + margin > window.innerHeight) {
+            if (rect.top - popupHeight - margin > 0) {
+                top = rect.top - popupHeight - margin; // Flip to top
+            } else {
+                top = window.innerHeight - popupHeight - margin; // Fit to bottom
+            }
+        }
+
+        // 5. Create the popup container
         const container = document.createElement("div");
         container.id = "olam-context-bubble";
         
         Object.assign(container.style, {
             position: "fixed",
-            top: `${rect.bottom + window.scrollY + 10}px`,
-            left: `${rect.left + window.scrollX}px`,
-            width: "500px",
-            height: "450px",
+            top: `${top}px`, 
+            left: `${left}px`,
+            width: `${popupWidth}px`,
+            height: `${popupHeight}px`,
             backgroundColor: "white",
             border: "2px solid #5d4037",
             borderRadius: "8px",
             boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
-            zIndex: "2147483647", 
+            zIndex: "2147483647",
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
             fontFamily: "sans-serif"
         });
 
-        // 4. Create Header
+        // 6. Create Header
         const header = document.createElement("div");
-        // Update: Added 'cursor: move' to indicate it's draggable
+        // Added cursor: move to indicate it is draggable
         header.style.cursor = "move"; 
         header.innerHTML = `
-            <div style="background:#5d4037; color:white; padding:5px 10px; font-size:12px; display:flex; justify-content:space-between; align-items:center; user-select: none;">
-                <span style="pointer-events: none;">Olam Malayalam Dictionary</span>
+            <div style="background:#5d4037; color:white; padding:5px 10px; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+                <span>Olam Malayalam Dictionary</span>
                 <span id="olam-close-x" style="cursor:pointer; font-size:18px; font-weight:bold;">×</span>
             </div>
         `;
         
-        // 5. Create Iframe
+        // 7. Create Iframe
         const iframe = document.createElement("iframe");
         iframe.src = request.url;
         iframe.style.width = "100%";
         iframe.style.height = "100%";
         iframe.style.border = "none";
+        // Disable pointer events on iframe WHILE dragging (optional optimization)
+        iframe.style.pointerEvents = "auto"; 
         iframe.style.backgroundColor = "white";
 
         container.appendChild(header);
         container.appendChild(iframe);
         document.body.appendChild(container);
 
-        // --- DRAG FUNCTIONALITY START ---
+        // --- 8. DRAG LOGIC START ---
         let isDragging = false;
-        let dragOffsetX = 0;
-        let dragOffsetY = 0;
+        let startX, startY, initialLeft, initialTop;
 
-        header.onmousedown = function(e) {
-            // Prevent drag if clicking the close button specifically
-            if (e.target.id === 'olam-close-x') return;
+        const onMouseDown = (e) => {
+            // Don't drag if clicking the close button
+            if (e.target.id === "olam-close-x") return;
 
             isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+
+            // Get the current position of the container
+            const rect = container.getBoundingClientRect();
+            initialLeft = rect.left;
+            initialTop = rect.top;
+
+            // Prevent text selection inside the popup while dragging
+            e.preventDefault();
             
-            // Calculate where the mouse is relative to the container corner
-            const containerRect = container.getBoundingClientRect();
-            dragOffsetX = e.clientX - containerRect.left;
-            dragOffsetY = e.clientY - containerRect.top;
-
-            // Important: Disable iframe events so the mouse doesn't get 'swallowed' by the iframe when dragging fast
+            // Helpful: creates an invisible overlay so iframe doesn't steal mouse events
             iframe.style.pointerEvents = "none";
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
         };
 
-        function onMouseMove(e) {
+        const onMouseMove = (e) => {
             if (!isDragging) return;
-            
-            // Calculate new position
-            const newLeft = e.clientX - dragOffsetX;
-            const newTop = e.clientY - dragOffsetY;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            container.style.left = `${initialLeft + dx}px`;
+            container.style.top = `${initialTop + dy}px`;
+        };
 
-            container.style.left = `${newLeft}px`;
-            container.style.top = `${newTop}px`;
-        }
+        const onMouseUp = () => {
+            if (isDragging) {
+                isDragging = false;
+                iframe.style.pointerEvents = "auto"; // Re-enable iframe interaction
+            }
+        };
 
-        function onMouseUp() {
-            isDragging = false;
-            // Re-enable iframe interaction
-            iframe.style.pointerEvents = "auto";
-            
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        }
-        // --- DRAG FUNCTIONALITY END ---
+        header.addEventListener("mousedown", onMouseDown);
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+        // --- DRAG LOGIC END ---
 
-        // 6. Close logic
+        // 9. Close logic
         const closePopup = () => {
-            container.remove();
+            // Clean up event listeners to avoid memory leaks
+            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mouseup", onMouseUp);
             document.removeEventListener("mousedown", outsideClick);
-            // Clean up drag listeners just in case
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
+            container.remove();
         };
 
         const outsideClick = (e) => {
-            // Don't close if we are currently dragging
-            if (isDragging) return;
             if (!container.contains(e.target)) closePopup();
         };
 
         container.querySelector("#olam-close-x").onclick = closePopup;
-        
         setTimeout(() => {
             document.addEventListener("mousedown", outsideClick);
         }, 100);
