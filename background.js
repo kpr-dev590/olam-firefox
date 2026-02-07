@@ -1,11 +1,27 @@
-// This runs when the browser starts or the extension is installed
+// Create the menu item
 browser.runtime.onInstalled.addListener(() => {
-    console.log("Pre-fetching Olam for cache...");
-    // We fetch the main page in the background so the images/scripts are cached
-    fetch("https://olam.in").catch(err => console.log("Pre-fetch failed, offline?"));
+    browser.contextMenus.create({
+        id: "olam-context-popup",
+        title: "🔍 Show Olam meaning for '%s'",
+        contexts: ["selection"]
+    });
 });
 
-// Optional: Periodically refresh the cache every 30 minutes
+// Listen for the click
+browser.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === "olam-context-popup") {
+        let word = info.selectionText.trim().toLowerCase().replace(/\s+/g, '+');
+        const url = `https://olam.in/dictionary/english/malayalam/${word}`;
+        
+        // Send a message to the content script in the active tab
+        browser.tabs.sendMessage(tab.id, { 
+            action: "OPEN_OLAM_POPUP", 
+            url: url 
+        });
+    }
+});
+
+// Alarm logic for cache
 browser.alarms.create("refreshCache", { periodInMinutes: 30 });
 browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === "refreshCache") {
